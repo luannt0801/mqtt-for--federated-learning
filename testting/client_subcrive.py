@@ -20,9 +20,10 @@ def on_unsubscribe(client, userdata, mid, reason_code_list, properties):
 def on_message(client, userdata, message):
     # userdata is the structure we choose to provide, here it's a list()
     userdata.append(message.payload)
+    print(message)
     # We only want to process 10 messages
     if len(userdata) >= 10:
-        client.unsubscribe("paho/test/topic")
+        client.unsubscribe("dulieu")
 
 def on_connect(client, userdata, flags, reason_code, properties):
     if reason_code.is_failure:
@@ -30,7 +31,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
     else:
         # we should always subscribe from on_connect callback to be sure
         # our subscribed is persisted across reconnections.
-        client.subscribe("$SYS/#")
+        client.subscribe("dulieu")
 
 mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqttc.on_connect = on_connect
@@ -39,6 +40,6 @@ mqttc.on_subscribe = on_subscribe
 mqttc.on_unsubscribe = on_unsubscribe
 
 mqttc.user_data_set([])
-mqttc.connect("mqtt.eclipseprojects.io")
+mqttc.connect("192.168.1.140", 1883)
 mqttc.loop_forever()
 print(f"Received the following message: {mqttc.user_data_get()}")
