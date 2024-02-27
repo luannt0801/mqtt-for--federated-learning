@@ -3,7 +3,7 @@ import paho.mqtt.client as mqtt
 
 def on_publish(client, userdata, mid, reason_code, properties):
     # reason_code and properties will only be present in MQTTv5. It's always unset in MQTTv3
-    try:
+    try: 
         userdata.remove(mid)
     except KeyError:
         print("on_publish() is called with a mid not present in unacked_publish")

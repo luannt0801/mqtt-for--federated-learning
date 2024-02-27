@@ -26,12 +26,13 @@ mqttc.user_data_set(unacked_publish)
 mqttc.connect("192.168.1.140", 1883, 60)
 mqttc.loop_start()
 
+
 # Our application produce some messages
-msg_info = mqttc.publish("dulieu", "my message", qos=1)
+msg_info = mqttc.publish("dulieu", "my message1", qos=1)
 unacked_publish.add(msg_info.mid)
 
-msg_info2 = mqttc.publish("dulieu", "my message2", qos=1)
-unacked_publish.add(msg_info2.mid)
+# msg_info2 = mqttc.publish("dulieu", "my message2", qos=1)
+# unacked_publish.add(msg_info2.mid)
 
 # Wait for all message to be published
 while len(unacked_publish):
@@ -39,7 +40,10 @@ while len(unacked_publish):
 
 # Due to race-condition described above, the following way to wait for all publish is safer
 msg_info.wait_for_publish()
-msg_info2.wait_for_publish()
+# msg_info2.wait_for_publish()
+
+for msg_id in unacked_publish:
+    print("Message ID:", msg_id)
 
 mqttc.disconnect()
 mqttc.loop_stop()
