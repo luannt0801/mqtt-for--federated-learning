@@ -1,9 +1,11 @@
 import time
 import paho.mqtt.client as mqtt
 
+
+
 def on_publish(client, userdata, mid, reason_code, properties):
     # reason_code and properties will only be present in MQTTv5. It's always unset in MQTTv3
-    try: 
+    try:
         userdata.remove(mid)
     except KeyError:
         print("on_publish() is called with a mid not present in unacked_publish")
@@ -23,14 +25,14 @@ mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqttc.on_publish = on_publish
 
 mqttc.user_data_set(unacked_publish)
-mqttc.connect("192.168.1.140", 1883)
+mqttc.connect("192.168.1.119", 1883, 60)
 mqttc.loop_start()
 
 # Our application produce some messages
-msg_info = mqttc.publish("dulieu", "nguyenthanhluan1", qos=1)
+msg_info = mqttc.publish("paho/test/topic", "my message", qos=1)
 unacked_publish.add(msg_info.mid)
 
-msg_info2 = mqttc.publish("dulieu", "nguyenthanhluan2 xin chao", qos=0)
+msg_info2 = mqttc.publish("paho/test/topic", "my message2", qos=1)
 unacked_publish.add(msg_info2.mid)
 
 # Wait for all message to be published
@@ -43,3 +45,5 @@ msg_info2.wait_for_publish()
 
 mqttc.disconnect()
 mqttc.loop_stop()
+
+def on_publish(client, userdata, mid, reason_code, properties):

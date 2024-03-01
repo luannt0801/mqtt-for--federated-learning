@@ -1,0 +1,4 @@
+1. Client đăng kí tham gia FL-CSS: Server gửi client_id để xác định client
+								   Server tạo topic cho client đó: Client_id
+								   
+2. 
