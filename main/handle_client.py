@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-
+ 
 def on_subcribe(client, userdata, mid, reason_code_list, properties):
     if reason_code_list[0].is_failure:
         print(f"Broker tu choi quyen subcribe: {reason_code_list[0]}")

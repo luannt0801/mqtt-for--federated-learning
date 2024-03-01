@@ -2,7 +2,7 @@ import paho.mqtt.client as mqtt
 
 from handle_client import *
 
-broker_host = "192.168.1.140"
+broker_host = "10.130.9.133"
 broker_port = 1883
 time_to_live = 60
 
