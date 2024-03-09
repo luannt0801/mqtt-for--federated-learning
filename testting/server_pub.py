@@ -1,6 +1,7 @@
 import time
 import paho.mqtt.client as mqtt
 
+# print key error
 def on_publish(client, userdata, mid, reason_code, properties):
     # reason_code and properties will only be present in MQTTv5. It's always unset in MQTTv3
     try:
@@ -18,32 +19,30 @@ def on_publish(client, userdata, mid, reason_code, properties):
         print("We could also try using a list of acknowledged mid rather than removing from pending list,")
         print("but remember that mid could be re-used !")
 
+# tao mot set cac tin nhan
 unacked_publish = set()
+
 mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqttc.on_publish = on_publish
 
 mqttc.user_data_set(unacked_publish)
-mqttc.connect("192.168.1.140", 1883, 60)
+mqttc.connect("192.168.10.9", 1883, 60)
 mqttc.loop_start()
 
 
 # Our application produce some messages
-msg_info = mqttc.publish("dulieu", "my message1", qos=1)
+msg_info = mqttc.publish("dulieu", "luanne", qos=0)
 unacked_publish.add(msg_info.mid)
 
-# msg_info2 = mqttc.publish("dulieu", "my message2", qos=1)
-# unacked_publish.add(msg_info2.mid)
-
-# Wait for all message to be published
-while len(unacked_publish):
-    time.sleep(0.1)
+# while len(unacked_publish):
+#     time.sleep(0.1)
 
 # Due to race-condition described above, the following way to wait for all publish is safer
-msg_info.wait_for_publish()
+# msg_info.wait_for_publish()
 # msg_info2.wait_for_publish()
 
-for msg_id in unacked_publish:
-    print("Message ID:", msg_id)
+# for msg_id in unacked_publish:
+#     print("Message ID:", msg_id)
 
 mqttc.disconnect()
 mqttc.loop_stop()

@@ -1,8 +1,0 @@
-switch to switch port
-
-access port
-
-có arp đi nhưng ko có gói tin về
-arp broadcast
-
-về qua 2 switch nên ko tìm đc máy đích
