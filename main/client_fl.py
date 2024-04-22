@@ -28,7 +28,6 @@ class Client_fl(MqttClient):
         self.on_disconnect = self._on_disconnect
         self.on_message = self._on_message
         self.on_subscribe = self._on_subscribe
-        self.connect(broker_address, port=port_mqtt, keepalive=3600)
         self.broker_name = broker_address
         self.client_id = client_id
 

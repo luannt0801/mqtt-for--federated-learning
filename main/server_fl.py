@@ -36,6 +36,7 @@ class Server(MqttClient):
 
     # check connect to broker return result code
     def on_connect_callback(self, client, userdata, flags, rc):
+        print("do connect call back")
         if rc == 0:
             print_log("Connect fault")
         else:
@@ -45,11 +46,13 @@ class Server(MqttClient):
 
     # while disconnect reconnect
     def on_disconnect_callback(self, client, userdata, rc):
+        print("do disconnect call back")
         print_log("Disconnected with result code "+str(rc))
         self.reconnect()
 
     # handle message receive from client
     def on_message_callback(self, client, userdata, msg):
+        print("do message call back")
         print(f"received msg from {msg.topic}")
         topic = msg.topic
         if topic == "dynamicFL/join": # topic is join --> handle_join
@@ -62,13 +65,16 @@ class Server(MqttClient):
         #     print("Received message:", str(msg.payload.decode("utf-8")))
 
     def on_subscribe_callback(self, mosq, obj, mid, granted_qos):
+        print("do on_subcribe_callback")
         print_log("Subscribed: " + str(mid) + " " + str(granted_qos))
 
     def send_task(self, task_name, client, this_client_id):
+        print("do send_task")
         print_log("publish to " + "dynamicFL/req/"+this_client_id)
         self.publish(topic="dynamicFL/req/"+this_client_id, payload=task_name)
 
     def send_model(self, path, client, this_client_id):
+        print("do send_model")
         f = open(path, "rb")
         data = f.read()
         f.close()
@@ -79,6 +85,7 @@ class Server(MqttClient):
         self.publish(topic="dynamicFL/model/all_client", payload=data)
 
     def handle_res(self, this_client_id, msg):
+        print("do handle_res")
         data = json.loads(msg.payload)
         cmd = data["task"]
         if cmd == "EVA_CONN":
@@ -92,6 +99,7 @@ class Server(MqttClient):
             self.handle_update_writemodel(this_client_id, msg)
 
     def handle_join(self, client, userdata, msg):
+        print("handle join")
         this_client_id = msg.payload.decode("utf-8")
         print("joined from"+" "+this_client_id)
         self.client_dict[this_client_id] = {
@@ -101,6 +109,7 @@ class Server(MqttClient):
         
 
     def handle_pingres(self, this_client_id, msg):
+        print("do handle_pingres")
         print(msg.topic+" "+str(msg.payload.decode()))
         ping_res = json.loads(msg.payload)
         this_client_id = ping_res["client_id"]
@@ -118,6 +127,7 @@ class Server(MqttClient):
                     self.send_model("saved_model/LSTMModel.pt", self, this_client_id) # hmm
     
     def handle_trainres(self, this_client_id, msg):
+        print("handle_trainres")
         payload = json.loads(msg.payload.decode())
         
         self.client_trainres_dict[this_client_id] = payload["weight"]
@@ -128,6 +138,7 @@ class Server(MqttClient):
         #print("done train!")
         
     def handle_update_writemodel(self, this_client_id, msg):
+        print("do handle_update_writemodel")
         state = self.client_dict[this_client_id]["state"]
         if state == "eva_conn_ok":
             self.client_dict[this_client_id]["state"] = "model_recv"
@@ -139,6 +150,7 @@ class Server(MqttClient):
             
 
     def start_round(self):
+        print("do start_round")
         self.n_round
         self.n_round = self.n_round + 1
         print_log(f"server start round {self.n_round}")
@@ -158,18 +170,21 @@ class Server(MqttClient):
     
 
     def do_aggregate(self):
+        print("do do_aggregate")
         print_log("Do aggregate ...")
         logger.info("start aggregate ...")
         self.aggregated_models(self.client_trainres_dict, self.n_round)
         logger.info("end aggregate!")
         
     def handle_next_round_duration(self):
+        print("do handle_next_round_duration")
         #if len(client_trainres_dict) < len(client_dict):
             #time_between_two_round = time_between_two_round + 10
         while (len(self.client_trainres_dict) < self.NUM_DEVICE):
             time.sleep(1)
 
     def end_round(self):
+        print("do end_round")
         logger.info(f"server end round {self.n_round}")
         print_log(f"server end round {self.n_round}")
         round_state = "finished"
