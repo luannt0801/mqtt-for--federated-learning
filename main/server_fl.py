@@ -14,13 +14,6 @@ from collections import OrderedDict
 
 from main.utils import *
 
-client_dict = {}
-client_trainres_dict = {}
-NUM_DEVICE = 0
-n_round = 0
-NUM_ROUND = 10
-time_between_two_round = 30
-
 logger = logging.getLogger()
 
 class Server(MqttClient):
@@ -36,27 +29,27 @@ class Server(MqttClient):
         self.client_dict = {}
         self.client_trainres_dict = {}
         self.NUM_ROUND = 50
-        self.NUM_DEVICE = 2
+        self.NUM_DEVICE = 1
         self.time_between_two_round = 10
         self.round_state = "finished"
         self.n_round = 0
 
     # check connect to broker return result code
-    def on_connect_callback(self, userdata, flags, rc):
+    def on_connect_callback(self, client, userdata, flags, rc):
         if rc == 0:
             print_log("Connect fault")
         else:
             print_log("Connected with result code "+str(rc))
-        # self.subscribe("dynamicFL/join")
-        self.subscribe("$SYS/#")
+        self.subscribe("dynamicFL/join")
+        # client.subscribe("$SYS/#")
 
     # while disconnect reconnect
-    def on_disconnect_callback(self, userdata, rc):
+    def on_disconnect_callback(self, client, userdata, rc):
         print_log("Disconnected with result code "+str(rc))
         self.reconnect()
 
     # handle message receive from client
-    def on_message_callback(self, userdata, msg):
+    def on_message_callback(self, client, userdata, msg):
         print(f"received msg from {msg.topic}")
         topic = msg.topic
         if topic == "dynamicFL/join": # topic is join --> handle_join
@@ -65,70 +58,25 @@ class Server(MqttClient):
             tmp = topic.split("/")
             this_client_id = tmp[2]
             self.handle_res(this_client_id, msg)
-        elif "$SYS/#":
-            print("Received message:", str(msg.payload.decode("utf-8")))
+        # elif "$SYS/#":
+        #     print("Received message:", str(msg.payload.decode("utf-8")))
 
     def on_subscribe_callback(self, mosq, obj, mid, granted_qos):
         print_log("Subscribed: " + str(mid) + " " + str(granted_qos))
 
-    # send task to client
-    def send_task(self, task_name, this_client_id):
+    def send_task(self, task_name, client, this_client_id):
         print_log("publish to " + "dynamicFL/req/"+this_client_id)
         self.publish(topic="dynamicFL/req/"+this_client_id, payload=task_name)
 
-    # send model to client
-    def send_model(self, path, this_client_id):
-        with open(path, "rb") as f:
-            data = f.read()
+    def send_model(self, path, client, this_client_id):
+        f = open(path, "rb")
+        data = f.read()
+        f.close()
+        #print_log(f"sent model to {this_client_id} with len = {len(data)}b")
+        #print_log("publish to " + "dynamicFL/model/"+this_client_id)
+        #print_log("publish to " + "dynamicFL/model/all_client")
+        #client.publish(topic="dynamicFL/model/"+this_client_id, payload=data)    
         self.publish(topic="dynamicFL/model/all_client", payload=data)
-
-    # do aggregated Model
-    def aggregated_models(self):
-        sum_state_dict = OrderedDict()
-        for client_id, state_dict in self.client_trainres_dict.items():
-            for key, value in state_dict.items():
-                if key in sum_state_dict:
-                    sum_state_dict[key] = sum_state_dict[key] + torch.tensor(value, dtype=torch.float32)
-                else:
-                    sum_state_dict[key] = torch.tensor(value, dtype=torch.float32)
-        num_models = len(self.client_trainres_dict)
-        avg_state_dict = OrderedDict((key, value / num_models) for key, value in sum_state_dict.items())
-        torch.save(avg_state_dict, f'model_round_{self.n_round}.pt')
-        torch.save(avg_state_dict, "saved_model/LSTMModel.pt")
-        self.client_trainres_dict.clear()
-
-    # check ping packet loss
-    def handle_pingres(self, this_client_id, msg):
-        ping_res = json.loads(msg.payload)
-        this_client_id = ping_res["client_id"]
-        if ping_res["packet_loss"] == 0.0:
-            print_log(f"{this_client_id} is a good client")
-            state = self.client_dict[this_client_id]["state"]
-            print_log(f"state {this_client_id}: {state}, round: {self.n_round}")
-            if state == "joined" or state == "trained":
-                self.client_dict[this_client_id]["state"] = "eva_conn_ok"
-                count_eva_conn_ok = sum(1 for client_info in self.client_dict.values() if client_info["state"] == "eva_conn_ok")
-                if count_eva_conn_ok == self.NUM_DEVICE:
-                    print_log("publish to dynamicFL/model/all_client")
-                    self.send_model("saved_model/LSTMModel.pt", self, this_client_id)
-
-    #
-    def handle_trainres(self, this_client_id, msg):
-        payload = json.loads(msg.payload.decode())
-        self.client_trainres_dict[this_client_id] = payload["weight"]
-        state = self.client_dict[this_client_id]["state"]
-        if state == "model_recv":
-            self.client_dict[this_client_id]["state"] = "trained"
-
-    def handle_update_writemodel(self, this_client_id, msg):
-        state = self.client_dict[this_client_id]["state"]
-        if state == "eva_conn_ok":
-            self.client_dict[this_client_id]["state"] = "model_recv"
-            self.send_task("TRAIN", self.client, this_client_id)
-            count_model_recv = sum(1 for client_info in self.client_dict.values() if client_info["state"] == "model_recv")
-            if count_model_recv == self.NUM_DEVICE:
-                print_log(f"Waiting for training round {self.n_round} from client...")
-                logger.info(f"Start training round {self.n_round} ...")
 
     def handle_res(self, this_client_id, msg):
         data = json.loads(msg.payload)
@@ -143,26 +91,82 @@ class Server(MqttClient):
             print_log(f"{this_client_id} complete task WRITE_MODEL")
             self.handle_update_writemodel(this_client_id, msg)
 
-    def handle_join(self, userdata, msg):
+    def handle_join(self, client, userdata, msg):
         this_client_id = msg.payload.decode("utf-8")
         print("joined from"+" "+this_client_id)
-        self.client_dict[this_client_id] = {"state": "joined"}
+        self.client_dict[this_client_id] = {
+            "state": "joined"
+        }
         self.subscribe(topic="dynamicFL/res/"+this_client_id)
+        
 
-    # start round
+    def handle_pingres(self, this_client_id, msg):
+        print(msg.topic+" "+str(msg.payload.decode()))
+        ping_res = json.loads(msg.payload)
+        this_client_id = ping_res["client_id"]
+        if ping_res["packet_loss"] == 0.0:
+            print_log(f"{this_client_id} is a good client")
+            state = self.client_dict[this_client_id]["state"]
+            print_log(f"state {this_client_id}: {state}, round: {n_round}")
+            if state == "joined" or state == "trained":
+                self.client_dict[this_client_id]["state"] = "eva_conn_ok"
+                #send_model("saved_model/FashionMnist.pt", server, this_client_id)
+                #print(client_dict)
+                count_eva_conn_ok = sum(1 for client_info in self.client_dict.values() if client_info["state"] == "eva_conn_ok")
+                if(count_eva_conn_ok == self.NUM_DEVICE):
+                    print_log("publish to " + "dynamicFL/model/all_client")
+                    self.send_model("saved_model/LSTMModel.pt", self, this_client_id) # hmm
+    
+    def handle_trainres(self, this_client_id, msg):
+        payload = json.loads(msg.payload.decode())
+        
+        self.client_trainres_dict[this_client_id] = payload["weight"]
+        state = self.client_dict[this_client_id]["state"]
+        if state == "model_recv":
+            self.client_dict[this_client_id]["state"] = "trained"
+
+        #print("done train!")
+        
+    def handle_update_writemodel(self, this_client_id, msg):
+        state = self.client_dict[this_client_id]["state"]
+        if state == "eva_conn_ok":
+            self.client_dict[this_client_id]["state"] = "model_recv"
+            self.send_task("TRAIN", self, this_client_id) # hmm
+            count_model_recv = sum(1 for client_info in self.client_dict.values() if client_info["state"] == "model_recv")
+            if(count_model_recv == self.NUM_DEVICE):
+                print_log(f"Waiting for training rounf {self.n_round} from client...")
+                logger.info(f"Start training round {self.n_round} ...")
+            
+
     def start_round(self):
+        self.n_round
         self.n_round = self.n_round + 1
         print_log(f"server start round {self.n_round}")
-        round_state = "started"
+        logger.info(f"server start round {self.n_round}")
+        self.round_state = "started"
         for client_i in self.client_dict:
-            self.send_task("EVA_CONN", self.client, client_i)
-        while len(self.client_trainres_dict) != self.NUM_DEVICE:
+            self.send_task("EVA_CONN", self, client_i) # hmm
+
+        #t = threading.Timer(round_duration, end_round)
+        #t.start()
+        #wait rev all model from client before end round
+        while (len(self.client_trainres_dict) != self.NUM_DEVICE):
             time.sleep(1)
         time.sleep(1)
         self.end_round()
 
+    
+
+    def do_aggregate(self):
+        print_log("Do aggregate ...")
+        logger.info("start aggregate ...")
+        self.aggregated_models(self.client_trainres_dict, self.n_round)
+        logger.info("end aggregate!")
+        
     def handle_next_round_duration(self):
-        while len(self.client_trainres_dict) < self.NUM_DEVICE:
+        #if len(client_trainres_dict) < len(client_dict):
+            #time_between_two_round = time_between_two_round + 10
+        while (len(self.client_trainres_dict) < self.NUM_DEVICE):
             time.sleep(1)
 
     def end_round(self):
@@ -171,14 +175,33 @@ class Server(MqttClient):
         round_state = "finished"
         if self.n_round < self.NUM_ROUND:
             self.handle_next_round_duration()
-            self.aggregated_models()
+            self.do_aggregate()
             t = threading.Timer(self.time_between_two_round, self.start_round)
             t.start()
         else:
-            self.aggregated_models()
+            self.do_aggregate()
             for c in self.client_dict:
-                self.send_task("STOP", self.client, c)
+                self.send_task("STOP", self, c) # hmm
                 print_log(f"send task STOP {c}")
             logger.info(f"Stop all!")
-            self.client.loop_stop()
+            self.loop_stop()
 
+    def aggregated_models(self, client_trainres_dict, n_round):
+        # Khởi tạo một OrderedDict để lưu trữ tổng của các tham số của mỗi layer
+        sum_state_dict = OrderedDict()
+
+        # Lặp qua các giá trị của dict chính và cộng giá trị của từng tham số vào sum_state_dict
+        for client_id, state_dict in client_trainres_dict.items():
+            for key, value in state_dict.items():
+                if key in sum_state_dict:
+                    sum_state_dict[key] = sum_state_dict[key] + torch.tensor(value, dtype=torch.float32)
+                else:
+                    sum_state_dict[key] = torch.tensor(value, dtype=torch.float32)
+
+        # Tính trung bình của các tham số
+        num_models = len(client_trainres_dict)
+        avg_state_dict = OrderedDict((key, value / num_models) for key, value in sum_state_dict.items())
+        torch.save(avg_state_dict, f'model_round_{n_round}.pt')
+        torch.save(avg_state_dict, "saved_model/LSTMModel.pt")
+        #delete parameter in client_trainres to start new round
+        client_trainres_dict.clear()

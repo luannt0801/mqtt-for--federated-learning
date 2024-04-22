@@ -3,12 +3,13 @@ from main.utils import *
 import paho.mqtt.client as client
 from main.client_fl import *
 import sys
+import threading
 
 
 if __name__ == "__main__":
     # here
 
-    broker_name = "192.168.101.246"
+    broker_name = "192.168.1.119"
     port_mqtt = 1883
 
     start_line = 0
@@ -28,15 +29,15 @@ if __name__ == "__main__":
     print(client_id)
     time.sleep(5)
 
-    client_fl._on_connect
-    client_fl._on_disconnect
-    client_fl._on_message
-    client_fl._on_subscribe
+    client_fl.on_connect
+    client_fl.on_disconnect
+    client_fl.on_message
+    client_fl.on_subscribe
 
     client_fl.message_callback_add("dynamicFL/model/"+client_id, client_fl.handle_model)
     client_fl.message_callback_add("dynamicFL/model/all_client", client_fl.handle_model)
 
-    client_fl.loop_start
+    client_fl.loop_start()
 
     client_fl.subscribe(topic="dynamicFL/model/"+client_id)
     client_fl.subscribe(topic="dynamicFL/model/all_client")
