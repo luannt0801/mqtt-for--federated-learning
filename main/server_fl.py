@@ -1,7 +1,7 @@
 import paho.mqtt.publish as publish
 import paho.mqtt.subscribe as subscribe
 
-# import paho.mqtt.client as client
+import paho.mqtt.client as mqtt
 from paho.mqtt.client import Client as MqttClient
 
 import time
@@ -24,16 +24,14 @@ time_between_two_round = 30
 logger = logging.getLogger()
 
 class Server(MqttClient):
-    def __init__(self, broker_address, port_mqtt, client_id):
-        super().__init__(client_id)
-        # self.on_connect = self._on_connect
-        # self.on_disconnect = self._on_disconnect
-        # self.on_message = self._on_message
-        # self.on_subscribe = self._on_subscribe
-
-        # self.broker_address = broker_address
-
-        # self.client_id = client_id
+    def __init__(self, client_id="", clean_session=True, userdata=None, protocol=mqtt.MQTTv311):
+        super().__init__(client_id, clean_session, userdata, protocol)
+        
+        # Set callbacks
+        self.on_connect = self.on_connect_callback
+        self.on_message = self.on_message_callback
+        self.on_disconnect = self.on_disconnect_callback
+        self.on_subscribe = self.on_subscribe_callback
 
         self.client_dict = {}
         self.client_trainres_dict = {}
@@ -44,20 +42,21 @@ class Server(MqttClient):
         self.n_round = 0
 
     # check connect to broker return result code
-    def _on_connect(self, userdata, flags, rc):
-        if rc == '':
+    def on_connect_callback(self, userdata, flags, rc):
+        if rc == 0:
             print_log("Connect fault")
         else:
             print_log("Connected with result code "+str(rc))
-        self.subscribe("dynamicFL/join")
+        # self.subscribe("dynamicFL/join")
+        self.subscribe("$SYS/#")
 
     # while disconnect reconnect
-    def _on_disconnect(self, userdata, rc):
+    def on_disconnect_callback(self, userdata, rc):
         print_log("Disconnected with result code "+str(rc))
         self.reconnect()
 
     # handle message receive from client
-    def _on_message(self, userdata, msg):
+    def on_message_callback(self, userdata, msg):
         print(f"received msg from {msg.topic}")
         topic = msg.topic
         if topic == "dynamicFL/join": # topic is join --> handle_join
@@ -66,8 +65,10 @@ class Server(MqttClient):
             tmp = topic.split("/")
             this_client_id = tmp[2]
             self.handle_res(this_client_id, msg)
+        elif "$SYS/#":
+            print("Received message:", str(msg.payload.decode("utf-8")))
 
-    def _on_subscribe(self, mosq, obj, mid, granted_qos):
+    def on_subscribe_callback(self, mosq, obj, mid, granted_qos):
         print_log("Subscribed: " + str(mid) + " " + str(granted_qos))
 
     # send task to client
