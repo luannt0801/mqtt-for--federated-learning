@@ -17,8 +17,8 @@ from main.utils import *
 logger = logging.getLogger()
 
 class Server(MqttClient):
-    def __init__(self, client_id="", clean_session=True, userdata=None, protocol=mqtt.MQTTv311):
-        super().__init__(client_id, clean_session, userdata, protocol)
+    def __init__(self, client_fl_id, clean_session=True, userdata=None, protocol=mqtt.MQTTv311):
+        super().__init__(client_fl_id, clean_session, userdata, protocol)
         
         # Set callbacks
         self.on_connect = self.on_connect_callback
@@ -36,15 +36,9 @@ class Server(MqttClient):
 
     # check connect to broker return result code
     def on_connect_callback(self, client, userdata, flags, rc):
-        print("do connect call back")
-        if rc == 0:
-            print_log("Connect fault")
-        else:
-            print_log("Connected with result code "+str(rc))
-        self.subscribe("dynamicFL/join")
-        # client.subscribe("$SYS/#")
+        print("do on_connect_callback")
+        print_log("Connected with result code "+str(rc))
 
-    # while disconnect reconnect
     def on_disconnect_callback(self, client, userdata, rc):
         print("do disconnect call back")
         print_log("Disconnected with result code "+str(rc))
@@ -70,6 +64,8 @@ class Server(MqttClient):
 
     def send_task(self, task_name, client, this_client_id):
         print("do send_task")
+        print(this_client_id)
+        print(task_name)
         print_log("publish to " + "dynamicFL/req/"+this_client_id)
         self.publish(topic="dynamicFL/req/"+this_client_id, payload=task_name)
 

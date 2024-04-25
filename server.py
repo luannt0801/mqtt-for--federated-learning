@@ -22,7 +22,7 @@ if __name__ == "__main__":
    #  round_state = "finished"
    #  n_round = 0
 
-    broker_name = "192.168.1.119"
+    broker_name = "192.168.101.246"
     port_mqtt = 1883
 
     server = Server(broker_name, port_mqtt, 'server')

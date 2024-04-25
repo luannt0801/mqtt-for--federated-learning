@@ -1,5 +1,6 @@
 import paho.mqtt.publish as publish
 import paho.mqtt.subscribe as subscribe
+import paho.mqtt.client as mqtt
 import json
 import numpy as np
 
@@ -22,31 +23,40 @@ arr_num_line = [134, 279, 590, 111, 157, 196, 109, 659, 100, 126, 185, 145, 274,
                        114, 249, 85, 224, 280, 69, 149, 62, 427, 130, 102, 102, 104, 116, 67, 139] 
     
 class Client_fl(MqttClient):
-    def __init__(self, broker_address, port_mqtt, client_id):
-        super().__init__(client_id)
-        self.on_connect = self._on_connect
-        self.on_disconnect = self._on_disconnect
-        self.on_message = self._on_message
-        self.on_subscribe = self._on_subscribe
-        self.broker_name = broker_address
-        self.client_id = client_id
+    # def __init__(self, client_id, broker_address, clean_session=True, userdata=None, protocol=mqtt.MQTTv311):
+    #     super().__init__(client_id, clean_session, userdata, protocol)
+    #     self.on_connect = self.on_connect_callback
+    #     self.on_disconnect = self.on_disconnect_callback
+    #     self.on_message = self.on_message_callback
+    #     self.on_subscribe = self.on_subscribe_callback
+    #     self.broker_name = broker_address
+    #     self.client_id = client_id
 
-    def _on_connect(self, userdata, flags, rc):
+    def __init__(self, client_fl_id, clean_session=True, userdata=None, protocol=mqtt.MQTTv311):
+        super().__init__(client_fl_id, clean_session, userdata, protocol)
+        
+        # Set callbacks
+        self.on_connect = self.on_connect_callback
+        self.on_message = self.on_message_callback
+        self.on_disconnect = self.on_disconnect_callback
+        self.on_subscribe = self.on_subscribe_callback
+
+    def on_connect_callback(self, client, userdata, flags, rc):
         print_log("Connected with result code "+str(rc))
 
-    def _on_disconnect(self, userdata, rc):
+    def on_disconnect_callback(self, client, userdata, rc):
         print_log("Disconnected with result code "+str(rc))
         #reconnect
         self.reconnect()
 
-    def _on_message(self, userdata, msg):
+    def on_message_callback(self, client, userdata, msg):
         print_log(f"on_message {self.client_id.decode()}")
         print_log("RECEIVED msg from " + msg.topic)
         topic = msg.topic
         if topic == "dynamicFL/req/"+self.client_id:
             self.handle_cmd(self, userdata, msg)
 
-    def _on_subscribe(self, mosq, obj, mid, granted_qos):
+    def on_subscribe_callback(self, mosq, obj, mid, granted_qos):
         print_log("Subscribed: " + str(mid) + " " + str(granted_qos))
 
     def do_evaluate_connection(self):
@@ -56,7 +66,7 @@ class Client_fl(MqttClient):
         result["client_id"] = client_id
         result["task"] = "EVA_CONN"
         publish.single(topic="dynamicFL/res/"+client_id, payload=json.dumps(result), hostname=self.broker_name)
-        print_log(f"publish to topic dynamicFL/res/{client_id}")
+        print_log(f"publish to topic dynamicFL/res/{self.client_id}")
         return result
     
     def do_evaluate_data(self):

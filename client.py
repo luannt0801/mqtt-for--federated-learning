@@ -9,7 +9,7 @@ import threading
 if __name__ == "__main__":
     # here
 
-    broker_name = "192.168.1.119"
+    broker_name = "192.168.101.246"
     port_mqtt = 1883
 
     start_line = 0
@@ -25,9 +25,11 @@ if __name__ == "__main__":
 
     num_line = arr_num_line[count]
     client_id = "client_" + sys.argv[1]
-    client_fl = Client_fl(broker_name, port_mqtt, client_id)
     print(client_id)
     time.sleep(5)
+
+    client_fl = Client_fl(broker_name, port_mqtt, client_id)
+    client_fl.connect(broker_name, port=port_mqtt, keepalive=3600)
 
     client_fl.on_connect
     client_fl.on_disconnect
