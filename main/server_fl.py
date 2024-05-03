@@ -28,7 +28,7 @@ class Server(MqttClient):
 
         self.client_dict = {}
         self.client_trainres_dict = {}
-        self.NUM_ROUND = 50
+        self.NUM_ROUND = 5
         self.NUM_DEVICE = 1
         self.time_between_two_round = 10
         self.round_state = "finished"
