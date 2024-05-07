@@ -112,7 +112,7 @@ class Server(MqttClient):
         if ping_res["packet_loss"] == 0.0:
             print_log(f"{this_client_id} is a good client")
             state = self.client_dict[this_client_id]["state"]
-            print_log(f"state {this_client_id}: {state}, round: {n_round}")
+            print_log(f"state {this_client_id}: {state}, round: {self.n_round}")
             if state == "joined" or state == "trained":
                 self.client_dict[this_client_id]["state"] = "eva_conn_ok"
                 #send_model("saved_model/FashionMnist.pt", server, this_client_id)
