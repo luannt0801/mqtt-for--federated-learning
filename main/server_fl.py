@@ -1,17 +1,14 @@
 import paho.mqtt.publish as publish
 import paho.mqtt.subscribe as subscribe
-
 import paho.mqtt.client as mqtt
 from paho.mqtt.client import Client as MqttClient
-
 import time
 import threading
 import json
 import logging
-
 import torch
 from collections import OrderedDict
-
+from main.add_config import server_config
 from main.utils import *
 
 logger = logging.getLogger()
@@ -28,11 +25,11 @@ class Server(MqttClient):
 
         self.client_dict = {}
         self.client_trainres_dict = {}
-        self.NUM_ROUND = 5
-        self.NUM_DEVICE = 1
-        self.time_between_two_round = 10
-        self.round_state = "finished"
-        self.n_round = 0
+        self.NUM_ROUND = server_config['NUM_ROUND']
+        self.NUM_DEVICE = server_config['NUM_DEVICE']
+        self.time_between_two_round = server_config['time_between_two_round']
+        self.round_state = server_config['round_state']
+        self.n_round = server_config['n_round']
 
     # check connect to broker return result code
     def on_connect_callback(self, client, userdata, flags, rc):
@@ -212,7 +209,7 @@ class Server(MqttClient):
         # Tính trung bình của các tham số
         num_models = len(client_trainres_dict)
         avg_state_dict = OrderedDict((key, value / num_models) for key, value in sum_state_dict.items())
-        torch.save(avg_state_dict, f'model_round_{n_round}.pt')
+        torch.save(avg_state_dict, f'model_round/model_round_{n_round}.pt')
         torch.save(avg_state_dict, "saved_model/LSTMModel.pt")
         #delete parameter in client_trainres to start new round
         client_trainres_dict.clear()

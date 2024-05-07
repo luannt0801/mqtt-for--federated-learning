@@ -4,28 +4,17 @@ import logging
 import datetime
 from main.utils import *
 from main.server_fl import *
-
+from main.add_config import server_config
 
 LOG_DIR = 'model_api/src/logs'
 LOG_FILE = f"model_api/src/logs/app-{datetime.today().strftime('%Y-%m-%d')}.log"
 
     
 if __name__ == "__main__":
-   
-   #  NUM_ROUND = 50
-   #  NUM_DEVICE = 10
-   #  global global_model
-   #  client_dict = {}
-   #  client_trainres_dict = {}
-   #  #round_duration = 50
-   #  time_between_two_round = 10
-   #  round_state = "finished"
-   #  n_round = 0
+    broker_name = server_config['host']
+    port_mqtt = server_config['port_mqtt']
 
-    broker_name = "192.168.1.119"
-    port_mqtt = 1883
-
-    server = Server(broker_name, port_mqtt, 'server')
+    server = Server(broker_name, port_mqtt, server_config['ID'])
     server.connect(broker_name, port=port_mqtt, keepalive=3600)
     print("do on connect")
     server.on_connect
@@ -47,3 +36,4 @@ if __name__ == "__main__":
     
 
     
+ 
